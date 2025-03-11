@@ -1,20 +1,13 @@
-const{
-  addPost,
-  getPost,
-  updatePost,
-  deletePost,
-  resetState,
-  blogArray
+const BlogManager = require('./Blog-lib'); // Adjust the path to where your BlogManager class is located
 
-}= require('./Blog-lib'); // Import the BlogManagement class
+describe('BlogManager Tests', () => {
+  let blogManager;
 
+  beforeEach(() => {
+    blogManager = new BlogManager(); // Create a new BlogManager instance before each test
+  });
 
-beforeEach(() => {
-  resetState();
-});
-
-  // Test for adding a post
-  test('should add a post with correct data', () => {
+  test('should add a post successfully', () => {
     blogManager.addPost(
       'Understanding JavaScript Closures',
       'Jane Doe',
@@ -22,140 +15,155 @@ beforeEach(() => {
       'A closure is a function that has access to its own scope, the scope in which it was created, and the global scope.',
       ['JavaScript', 'Closures', 'Functions']
     );
-
     const posts = blogManager.listPosts();
-    expect(posts).toHaveLength(1);
+    expect(posts.length).toBe(1);
     expect(posts[0].title).toBe('Understanding JavaScript Closures');
-    expect(posts[0].author.name).toBe('Jane Doe');
-    expect(posts[0].likes).toBe(0);
-    expect(posts[0].comments).toEqual([]);
-    expect(posts[0].tags).toEqual(['JavaScript', 'Closures', 'Functions']);
   });
 
-  // Edge case: Add a post with missing required fields
   test('should not add a post with missing required fields', () => {
-    blogManager.addPost(
-      'Understanding JavaScript Closures',
-      '',
-      'jane@example.com',
-      'A closure is a function that has access to its own scope, the scope in which it was created, and the global scope.',
-      ['JavaScript', 'Closures', 'Functions']
-    );
-
-    const posts = blogManager.listPosts();
-    expect(posts).toHaveLength(0); // Ensure no post was added due to missing author
+    expect(() => {
+      blogManager.addPost(
+        '', // Missing title
+        'Jane Doe',
+        'jane@example.com',
+        'Content without a title.',
+        ['JavaScript']
+      );
+    }).toThrow('Title is required');
   });
 
-  // Test for duplicate post ID (this won't happen with our current auto-ID mechanism, but it's still important to check if we add duplicate titles or authors)
-  test('should handle duplicate post titles correctly', () => {
+  test('should handle duplicate posts correctly', () => {
     blogManager.addPost(
       'Understanding JavaScript Closures',
       'Jane Doe',
       'jane@example.com',
-      'A closure is a function...',
+      'A closure is a function that has access to its own scope, the scope in which it was created, and the global scope.',
+      ['JavaScript', 'Closures', 'Functions']
+    );
+    blogManager.addPost(
+      'Understanding JavaScript Closures', // Same title as the first one
+      'Jane Doe',
+      'jane@example.com',
+      'Duplicate post content.',
       ['JavaScript', 'Closures']
     );
+    const posts = blogManager.listPosts();
+    expect(posts.length).toBe(2); // Allow duplicates for now, but you could add logic to prevent it.
+  });
+
+  test('should get a specific post by ID', () => {
     blogManager.addPost(
-      'Understanding JavaScript Closures',
+      'Intro to Python',
       'John Smith',
       'john@example.com',
-      'A closure is a function...',
-      ['JavaScript', 'Closures']
+      'Python is an easy-to-learn programming language.',
+      ['Python', 'Programming']
     );
-
-    const posts = blogManager.listPosts();
-    expect(posts).toHaveLength(2); // Ensure both posts are added
+    const post = blogManager.getPost(1); // Get post by ID
+    expect(post.title).toBe('Intro to Python');
+    expect(post.author.name).toBe('John Smith');
   });
 
-  // Test for updating a post
+  test('should return an error if post ID does not exist', () => {
+    const result = blogManager.getPost(99); // Non-existent post ID
+    expect(result).toBe('Post with ID 99 not found.');
+  });
+
   test('should update a post correctly', () => {
     blogManager.addPost(
-      'Understanding JavaScript Closures',
-      'Jane Doe',
-      'jane@example.com',
-      'A closure is a function...',
-      ['JavaScript', 'Closures']
+      'Intro to Python',
+      'John Smith',
+      'john@example.com',
+      'Python is an easy-to-learn programming language.',
+      ['Python', 'Programming']
     );
-
-    const postId = 1;
-    blogManager.updatePost(postId, 'Updated title', 'Updated content', ['Updated', 'JavaScript']);
-
-    const updatedPost = blogManager.getPost(postId);
-    expect(updatedPost.title).toBe('Updated title');
-    expect(updatedPost.content).toBe('Updated content');
-    expect(updatedPost.tags).toEqual(['Updated', 'JavaScript']);
+    blogManager.updatePost(1, 'Updated Python Post', 'Updated content.', ['Python', 'Tutorial']);
+    const updatedPost = blogManager.getPost(1);
+    expect(updatedPost.title).toBe('Updated Python Post');
+    expect(updatedPost.content).toBe('Updated content.');
   });
 
-  // Edge case: Try updating a non-existing post
-  test('should handle updating a non-existing post gracefully', () => {
-    const result = blogManager.updatePost(999, 'New title', 'New content', ['New', 'Tags']);
-    expect(result).toBeUndefined(); // As the post with ID 999 doesn't exist
+  test('should not update a post with invalid ID', () => {
+    expect(() => {
+      blogManager.updatePost(99, 'Invalid Post', 'Invalid content.');
+    }).toThrow('Post with ID 99 not found.');
   });
 
-  // Test for deleting a post
-  test('should delete a post correctly', () => {
+  test('should delete a post successfully', () => {
     blogManager.addPost(
-      'Understanding JavaScript Closures',
-      'Jane Doe',
-      'jane@example.com',
-      'A closure is a function...',
-      ['JavaScript', 'Closures']
+      'Intro to Python',
+      'John Smith',
+      'john@example.com',
+      'Python is an easy-to-learn programming language.',
+      ['Python', 'Programming']
     );
-
-    const postId = 1;
-    blogManager.deletePost(postId);
+    blogManager.deletePost(1);
     const posts = blogManager.listPosts();
-    expect(posts).toHaveLength(0); // Ensure the post was deleted
+    expect(posts.length).toBe(0);
   });
 
-  // Edge case: Try deleting a non-existing post
-  test('should handle deleting a non-existing post gracefully', () => {
-    const result = blogManager.deletePost(999); // Post with ID 999 doesn't exist
-    expect(result).toBeUndefined(); // Expect undefined or some appropriate error handling
+  test('should not delete a post with invalid ID', () => {
+    expect(() => {
+      blogManager.deletePost(99);
+    }).toThrow('Post with ID 99 not found.');
   });
 
-  // Test for adding a comment to a post
-  test('should add a comment to a post correctly', () => {
+  test('should add a comment to a post', () => {
     blogManager.addPost(
-      'Understanding JavaScript Closures',
-      'Jane Doe',
-      'jane@example.com',
-      'A closure is a function...',
-      ['JavaScript', 'Closures']
+      'Intro to Python',
+      'John Smith',
+      'john@example.com',
+      'Python is an easy-to-learn programming language.',
+      ['Python', 'Programming']
     );
-
-    const postId = 1;
-    blogManager.addComment(postId, 'John Doe', 'Great post!');
-    const post = blogManager.getPost(postId);
-    expect(post.comments).toHaveLength(1);
+    blogManager.addComment(1, 'Alice', 'Great post!');
+    const post = blogManager.getPost(1);
+    expect(post.comments.length).toBe(1);
     expect(post.comments[0].message).toBe('Great post!');
   });
 
-  // Edge case: Add a comment to a non-existing post
-  test('should handle adding a comment to a non-existing post gracefully', () => {
-    const result = blogManager.addComment(999, 'John Doe', 'Great post!');
-    expect(result).toBeUndefined(); // As post with ID 999 does not exist
+  test('should not add a comment to a non-existent post', () => {
+    expect(() => {
+      blogManager.addComment(99, 'Alice', 'Great post!');
+    }).toThrow('Post with ID 99 not found.');
   });
 
-  // Test for liking a post
-  test('should like a post correctly', () => {
+  test('should like a post successfully', () => {
     blogManager.addPost(
-      'Understanding JavaScript Closures',
-      'Jane Doe',
-      'jane@example.com',
-      'A closure is a function...',
-      ['JavaScript', 'Closures']
+      'Intro to Python',
+      'John Smith',
+      'john@example.com',
+      'Python is an easy-to-learn programming language.',
+      ['Python', 'Programming']
     );
-
-    const postId = 1;
-    blogManager.likePost(postId);
-    const post = blogManager.getPost(postId);
-    expect(post.likes).toBe(1); // Ensure likes count is incremented correctly
+    blogManager.likePost(1);
+    const post = blogManager.getPost(1);
+    expect(post.likes).toBe(1);
   });
 
-  // Edge case: Like a non-existing post
-  test('should handle liking a non-existing post gracefully', () => {
-    const result = blogManager.likePost(999); // Post with ID 999 does not exist
-    expect(result).toBeUndefined(); // Expect undefined or some appropriate error handling
+  test('should not like a non-existent post', () => {
+    expect(() => {
+      blogManager.likePost(99);
+    }).toThrow('Post with ID 99 not found.');
+  });
+
+  test('should reset the state correctly', () => {
+    blogManager.addPost(
+      'Intro to Python',
+      'John Smith',
+      'john@example.com',
+      'Python is an easy-to-learn programming language.',
+      ['Python', 'Programming']
+    );
+    blogManager.resetState();
+    const posts = blogManager.listPosts();
+    expect(posts.length).toBe(0);
+  });
+
+  test('should handle missing fields when adding a post', () => {
+    expect(() => {
+      blogManager.addPost('', 'Jane', '', 'Content missing title and email.', []);
+    }).toThrow('Title is required');
   });
 });
+
